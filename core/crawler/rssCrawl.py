@@ -4,6 +4,7 @@ from selenium import webdriver
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
+from datetime import datetime
 
 
 
@@ -89,6 +90,11 @@ def save_articles(entries, company, get_encoding):
     file_path = "/Users/hyung/articles/" + company + "/"
     count = 0
     for entry in entries:
+        # id 생성
+        now = datetime.now()
+        id = now.strftime('%Y%m%d%H%M%S')
+        id += str(now.microsecond)
+
         title = entry["title"]
         link = entry["link"]
         try:
@@ -97,9 +103,9 @@ def save_articles(entries, company, get_encoding):
             date = "date없음"
 
         try:
-            f = open(file_path+title, 'w', encoding=get_encoding)
+            f = open(file_path+company+'-'+id, 'w', encoding=get_encoding)
         except:
-            print(file_path+title + "    file open 오류발생")
+            print(file_path+company+'-'+id + "       제목: " + title + "    file open 오류발생")
             continue
 
         request_headers = {
@@ -146,7 +152,7 @@ def save_articles(entries, company, get_encoding):
                 content = soup.find("div", attrs={"itemprop": "articleBody"})
 
         try:
-            f.write(content.getText().strip())
+            f.write(title + '\n' + content.getText().strip())
             f.close()
             count += 1
         except:
