@@ -1,7 +1,7 @@
-# Editor component
+## Editor component
 
-## Directories
-* [core](#)
-  ├── crawler
-  └── analyzer
+### Directories
+* [core](#)           
+  ├── crawler         
+  └── analyzer        
 * [server-application](#)
