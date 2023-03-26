@@ -106,9 +106,13 @@ def save_articles(entries, company, get_encoding):
             'User-Agent': ('Mozilla/5.0 (Windows NT 10.0;Win64; x64)\
                             AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98\
                             Safari/537.36'), }
-        article_res = requests.get(link, headers=request_headers)
-        article_res.encoding = get_encoding
-        soup = BeautifulSoup(article_res.text, "html.parser")
+        try:
+            article_res = requests.get(link, headers=request_headers)
+            article_res.encoding = get_encoding
+            soup = BeautifulSoup(article_res.text, "html.parser")
+        except:
+            print(title + "      requests.get() 오류발생")
+            continue
 
 
         #### jtbc 본문 ####
