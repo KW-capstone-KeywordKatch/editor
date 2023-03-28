@@ -5,6 +5,7 @@ import os
 import sys
 import re
 import time
+import math
 
 ARTICLE_ARCHIVE_PATH = '/Users/mingeun/KeywordKatch/articles/'
 FREQUENT_SPECIAL_CHARS = ['▲', '=']
@@ -35,9 +36,9 @@ def refine(content):
     의미 없는 기호(탈출문자, 구두점 등)를 제거한다.
     '''
     # 줄바꿈, 괄호 공백으로 변환
-    content = re.sub('[\t\n()=.]', ' ', content)           
+    content = re.sub('[\t\n()=.<>◇\[\]"“‘”’·○▲△▷,\']', ' ', content)           
     # 대괄호, 큰따옴표, 작은따옴표 제거
-    content = re.sub('[\[\]"“‘”’▲△▷,\']', '', content)       
+    # content = re.sub('[\[\]"“‘”’·○▲△▷,\']', '', content)       
     return content
 
 
@@ -79,17 +80,18 @@ def get_n_tokens(tokens, n):
     return result
 
 
-def term_frequency(documents, n_min, n_max):
+def get_filtered_tf(documents, n_min, n_max):
     '''
     전체 토큰 중 길이가 start이상이고 end보다 작은 토큰들의 빈도수가 기록된 
     딕셔너리 리스트를 반환한다.
     반환된 배열은 
     [{token: f, token: f, ...}, {token: f, token: f, ...}, ...] 형태이다.
-    document_tokens - 원소가 하나의 문서에서 추출한 모든 토큰 리스트인 리스트 
+    documents - 원소가 하나의 문서에서 추출한 모든 토큰 리스트인 리스트 
     n_min - 토큰 길이 최솟값 
     n_max - 토큰 길이의 상한값 (excluded)
     '''
     result = []
+    # fij 계산
     for document in documents:
         frequencies = {}
         for token in document:
@@ -98,8 +100,9 @@ def term_frequency(documents, n_min, n_max):
                     frequencies[token] = 1
                 else:
                     frequencies[token] += 1
-        result.append(frequencies)
-
+        # 기사의 모든 토큰이 n_min보다 짧은 경우
+        if len(frequencies) > 0:
+            result.append(frequencies)
     return result
 
 
@@ -161,23 +164,69 @@ def reduce(term_frequencies):
             result[term] = term_frequencies[term]
     return result
 
-
-def tf_idf_score(total_tokens):
+def normalize_frequency(documents):
     '''
-    {각 토큰: tf-idf 점수} 형태의 딕셔너리를 반환한다.
-    n_tokens - 길이가 n인 토큰들의 리스트
-    n - 토큰의 길이
+    토큰의 빈도를 최대값으로 나눈다.
+    documents - {term: freq} 딕셔너리 배열 (각 원소는 하나의 문서에 대응)
     '''
-    # 딕셔너리 초기화
-    scores = {}
-    for token in total_tokens:
-        if token not in scores:
-            scores[token] = 0
-        else:
-            scores[token] += 1
+    for document in documents:
+        max_freq = max(document.values())
+        for term, freq in document.items():
+            document[term] = freq/max_freq
+    return documents
 
 
-    return scores
+def get_idf(documents):
+    '''
+    모든 토큰의 IDF값을 구하여 반환한다.
+    '''
+    result = []
+    N = len(documents)  # 문서 개수
+    for document in documents:
+        idf = dict()
+        for term in document.keys():
+            n = 0
+            for doc in documents:
+                if term in doc:
+                    n += 1
+            idf[term] = math.log2(N/n)
+        result.append(idf)
+    return result
+
+
+def get_df(documents):
+    '''
+    모든 토큰의 DF값을 구하여 반환한다.
+    핫 키워드를 찾는데 사용한다.
+    '''
+    result = []
+    N = len(documents)  # 문서 개수
+    for document in documents:
+        df = dict()
+        for term in document.keys():
+            n = 0
+            for doc in documents:
+                if term in doc:
+                    n += 1
+            df[term] = 1/math.log2(N/n)
+        result.append(df)
+    return result
+
+
+def tf_idf_score(tf, idf):
+    '''
+    각 토큰의 TF.IDF 점수를 반환한다.
+    '''
+    result = list()
+    if len(tf) != len(idf):
+        print('[ERROR] tf_idf_score')
+        exit()
+    for i in range(len(tf)):
+        scores = dict()
+        for term in tf[i].keys():
+            scores[term] = tf[i][term] * idf[i][term]
+        result.append(scores)
+    return result
 
 
 ######################## for dev ###############################
@@ -219,33 +268,97 @@ def print_token_score(score):
             print("%-4s : %-5d" % (t, s))
     print(f'2번 이상 등장한 토큰의 개수: {count}')
 
+
+def print_stage_info(stage):
+    stage_name = 'unnamed'
+    if stage == 1:
+        stage_name = 'tokenize&map'
+    elif stage == 2:
+        stage_name = 'filter'
+    elif stage == 3:
+        stage_name = 'reduce'
+    elif stage == 4:
+        stage_name = 'normalization'
+    elif stage == 5:
+        stage_name = 'IDF'
+    elif stage == 6:
+        stage_name = 'TF*IDF'
+    print('[stage%d] %15s is done.' % (stage, stage_name))
+
+
 ############################# main #############################
 if __name__ == "__main__":
     presses = get_presses()
     documents_tokens = []
     count_article = 0
     start_time = time.time()        # [dev] 
+    ''' 
+    stage 1 - 모든 기사를 읽어 토큰화한다.
+    documents_tokens - 각 원소가 토큰화된 기사인 리스트 
+    (리스트의 크기가 기사의 개수와 일치)
+    '''
     for press in presses:
         paths_to_article = get_paths_to_article(press)
         for path in paths_to_article:
             try:
                 body = read_article(path)
+                # 기사 파일만 있고 내용이 없는 경우 패스
+                if len(body) == 0:
+                    print(path)
+                    continue
                 documents_tokens.append(tokenize(body))
                 count_article += 1
             except Exception as error:
                 print(f'[{error}]: {path}')
-    term_frequencies = term_frequency(documents_tokens, 3, 11)
-    for i, document in enumerate(term_frequencies):
-        term_frequencies[i] = reduce(reduce(document))
+    print_stage_info(1)
+    '''
+    stage 2 - filter
+    크기가 3~10인 토큰만 남긴다. 
+    기사의 모든 토큰이 3보다 작은 경우가 있다.
+    '''
+    term_freqs = get_filtered_tf(documents_tokens, 3, 11)
+    print_stage_info(2)
+    '''
+    stage 3 - reduce
+    적당히 비슷한 토큰을 합친다.
+    '''
+    for i, document in enumerate(term_freqs):
+        term_freqs[i] = reduce(reduce(document))
+        # term_freqs[i] = reduce(document)
+    print_stage_info(3)
+    '''
+    stage 4 - normalize
+    모든 토큰의 TF값 계산
+    '''
+    term_freqs = normalize_frequency(term_freqs)
+    print_stage_info(4)
+    '''
+    stage 5 - IDF
+    모든 토큰의 IDF 계산 
+    O(T*N) N은 문서의 개수, T는 모든 토큰의 개수 
+    139565 * 1178
+    '''
+    # inverse_doc_freqs = get_idf(term_freqs)
+    # print_stage_info(5)
+    '''
+    stage 6 - TF*IDF 계산
+    '''
+    # scores = tf_idf_score(term_freqs, inverse_doc_freqs)
+    # print_stage_info(6)
     end_time = time.time()          # [dev]
     # print
     total_token_count = 0
-    for i, document in enumerate(term_frequencies):
-        print('document%4d'%i)
-        print(document)
+    for i, document in enumerate(term_freqs):
+        print('document%4d==========='%i)
+        for term, freq in document.items():
+            if freq > 0.3:
+                print('%-10s : %-0.3f' % (term, freq)) 
         total_token_count += len(document)
-    print("기사 한 개당 평균 토큰 개수: %0.1f" % (total_token_count/len(term_frequencies)))
+        print()
+    print()
+    print(f"analyzed {count_article} articles.")
+    print("기사 한 개당 평균 토큰 개수: %0.1f" % (total_token_count/len(term_freqs)))
+    print('전체 토큰 개수: %d' % total_token_count)
     print("elapsed time: %0.2f" % (end_time - start_time))
-    print(f"analyze {count_article} articles.")
 
 
