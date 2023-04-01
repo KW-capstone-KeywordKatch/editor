@@ -7,7 +7,7 @@ import re
 import time
 import math
 
-ARTICLE_ARCHIVE_PATH = '/Users/mingeun/KeywordKatch/articles/'
+ARTICLE_ARCHIVE_PATH = '/Users/mingeun/articles/'
 FREQUENT_SPECIAL_CHARS = ['▲', '=']
 
 ################################# 자체 제작 함수 #################################
@@ -36,7 +36,7 @@ def refine(content):
     의미 없는 기호(탈출문자, 구두점 등)를 제거한다.
     '''
     # 줄바꿈, 괄호 공백으로 변환
-    content = re.sub('[\t\n()=.<>◇\[\]"“‘”’·○▲△▷,\']', ' ', content)           
+    content = re.sub('[\t\n()=.<>◇\[\]"“‘”’·○▲△▷▶\-,\']', ' ', content)           
     # 대괄호, 큰따옴표, 작은따옴표 제거
     # content = re.sub('[\[\]"“‘”’·○▲△▷,\']', '', content)       
     return content
@@ -297,6 +297,7 @@ if __name__ == "__main__":
     documents_tokens - 각 원소가 토큰화된 기사인 리스트 
     (리스트의 크기가 기사의 개수와 일치)
     '''
+    valid_article_paths = []
     for press in presses:
         paths_to_article = get_paths_to_article(press)
         for path in paths_to_article:
@@ -306,6 +307,7 @@ if __name__ == "__main__":
                 if len(body) == 0:
                     print(path)
                     continue
+                valid_article_paths.append(path)
                 documents_tokens.append(tokenize(body))
                 count_article += 1
             except Exception as error:
@@ -349,7 +351,7 @@ if __name__ == "__main__":
     # print
     total_token_count = 0
     for i, document in enumerate(term_freqs):
-        print('document%4d==========='%i)
+        print('%-64s==========='%valid_article_paths[i])
         for term, freq in document.items():
             if freq > 0.3:
                 print('%-10s : %-0.3f' % (term, freq)) 
@@ -360,5 +362,3 @@ if __name__ == "__main__":
     print("기사 한 개당 평균 토큰 개수: %0.1f" % (total_token_count/len(term_freqs)))
     print('전체 토큰 개수: %d' % total_token_count)
     print("elapsed time: %0.2f" % (end_time - start_time))
-
-
