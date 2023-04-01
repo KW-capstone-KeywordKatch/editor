@@ -56,7 +56,7 @@ def get_n_grams(content, n):
 
 def tokenize(content):
     '''
-    전달받은 문자열을 이루는 단어가 원소인 리스트를 반환한다.
+    기사의 본문(content)를 토큰화하여 반환한다.
     '''
     tokens = refine(content)
     tokens = [word  for word in tokens.split(' ') if len(word)>0]
@@ -140,7 +140,7 @@ def get_common_str(term1, term2):
 def reduce(term_frequencies):
     '''
     하나의 문서에서 적당히 비슷한 토큰을 하나로 합친다.
-    term_frequencies - 하나의 문서에 대한 term_frequencies 딕셔너리
+    term_frequencies - 하나의 문서에 대한 term_frequencies 딕셔너리(stage2의 결과)
     {term: f, term: f, ...} 형태
     '''
     result = {}
@@ -157,8 +157,7 @@ def reduce(term_frequencies):
                         result[new_key] = term_frequencies[term] + term_frequencies[other]
                     reduced_keys.add(term)
                     reduced_keys.add(other)
-    # 합쳐지지 않은 토큰들을 보존해야 TF.IDF에서 유효한 결과가 나온다.
-    # 희귀한 단어들을 돋보이게 만든다.
+    # 합쳐지지 않은 토큰들을 보존한다.
     for term in terms:
         if term not in reduced_keys:
             result[term] = term_frequencies[term]
