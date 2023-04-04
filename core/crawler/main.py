@@ -29,7 +29,8 @@ companies = {"https://fs.jtbc.co.kr/RSS/newsflash.xml": "jtbc", "https://fs.jtbc
              "http://rss.edaily.co.kr/edaily_news.xml": "edaily",
              "https://www.fnnews.com/rss/r20/fn_realnews_all.xml": "financial",
              "https://www.mbn.co.kr/rss/": "mbn"}
-# companies = {"https://www.chosun.com/arc/outboundfeeds/rss/?outputType=xml": "chosun"}
+companies = {"https://www.chosun.com/arc/outboundfeeds/rss/?outputType=xml": "chosun"}
+# companies = {"https://fs.jtbc.co.kr/RSS/newsflash.xml": "jtbc", "https://www.khan.co.kr/rss/rssdata/total_news.xml": "kyunghyang"}
 
 start = time.time()
 count = 0
@@ -56,11 +57,11 @@ for url, company in companies.items() :
 
 
     ###### 출력 테스트 ######
-    # print_articles(entries, company, res.encoding)
+    print_articles(entries, company, res.encoding)
 
 
     ###### 저장 테스트 #####
-    count += save_articles(entries, company, res.encoding)
+    # count += save_articles(entries, company, res.encoding)
     print("-----------------------------------------------------------")
 
 
