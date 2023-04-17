@@ -19,6 +19,6 @@
 
 ## contributors
 * [khw3754](https://github.com/khw3754)
- * crawler 모듈
+  * crawler 모듈
 * [Mingeun Park](https://github.com/mingeun2154)
- * analyzer 모듈
+  * analyzer 모듈
