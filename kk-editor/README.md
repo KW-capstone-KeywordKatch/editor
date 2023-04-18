@@ -16,5 +16,6 @@ $ ./katch.py sync
 
 3. Flask 애플리케이션 실행
 ```python
+$ pipenv shell
 $ ./katch.py execute
 ```
