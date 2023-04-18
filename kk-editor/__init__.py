@@ -41,7 +41,9 @@ def create_app():
     @app.route('/crawl')
     def start_crawl():
         import core.crawler.main
-        core.crawler.main.start_crawl()
+        count, spend_time = core.crawler.main.start_crawl(db, Article)
+        return f"{count}개 저장 완료.  걸린 시간: {spend_time}"
+
 
     app.register_blueprint(v1.bp)
 
