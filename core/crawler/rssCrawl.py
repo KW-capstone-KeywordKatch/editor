@@ -5,6 +5,10 @@ import requests
 # from selenium.webdriver.support import expected_conditions as EC
 # from selenium.webdriver.common.by import By
 from datetime import datetime
+from selenium import webdriver
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.common.by import By
+
 
 
 '''
@@ -47,6 +51,32 @@ def date_format(date, company):
 
     return year + month + day + clock
 
+def find_img(soup, company, link):
+    if company == "hankyung":
+        return soup.find("article").find("img")["src"]
+    elif company == "financial":
+        return soup.find("span", attrs={"class":"art_img"}).find("img")["src"]
+    elif company == "jtbc":
+        #### 셀레니움 써보자
+        options = webdriver.ChromeOptions()
+        options.add_argument('headless')
+        options.add_argument("disable-gpu")
+        driver = webdriver.Chrome(ChromeDriverManager().install(), options=options)
+        driver.get(link)
+        print(driver.find_element(By.XPATH, '//*[@id="NV10549536-id"]').text)
+    elif company == "hankyung":
+        return soup.find("div", attrs={"class":"figure-img"})
+    elif company == "maeil":
+        return soup.find("div", attrs={"class":"thumb"}).find("img")["data-src"]
+    elif company == "kyunghyang":
+        return soup.find("picture").find("img")["src"]
+    elif company == "herald":
+        return soup.find("div", attrs={"id":"articleText"}).find("img")["src"]
+    elif company == "edaily":
+        return soup.find("div", attrs={"itemprop":"articleBody"}).find("img")["src"]
+    elif company == "mbn":
+        return "https:" + soup.find("div", attrs={"itemprop":"articleBody"}).find("img")["data-src"]
+
 
 def print_articles(entries, company, get_encoding):
     for entry in entries:
@@ -58,8 +88,24 @@ def print_articles(entries, company, get_encoding):
         except:
             date = "date없음"
 
+        # RSS에 이미지 url 있는 언론사들 (국민, 머니투데이, sbs, 동아)
+        try:
+            if company == "kukmin" or company == "moneytoday":
+                img = entry["description"].split('src="')[1].split('"')[0]
+            elif company == "sbs":
+                img = entry["links"][1]["href"]
+            elif company == "donga":
+                img = entry["summary"].split('src="')[1].split('"')[0]
+            elif company == "hankyoreh":
+                img = entry["description"].split('src="')[1].split('"')[0]
+            else:
+                img = None
+        except:
+            img = "이미지 없음"
+
         print(title)
         print(link)
+        print(img)
 
 
         request_headers = {
@@ -70,7 +116,12 @@ def print_articles(entries, company, get_encoding):
         article_res.encoding = get_encoding
         soup = BeautifulSoup(article_res.text, "html.parser")
 
-
+        if not img:
+            try:
+                img = find_img(soup, company, link)
+            except:
+                img = "이미지 없음"
+            print(img)
 
         #### jtbc 본문 ####
         if company == "jtbc" :
