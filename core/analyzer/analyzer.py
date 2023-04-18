@@ -9,6 +9,7 @@ import math
 
 ARTICLE_ARCHIVE_PATH = '/Users/mingeun/articles/'
 FREQUENT_SPECIAL_CHARS = ['▲', '=']
+VALID_ARTICLES = dict()
 
 ################################# 자체 제작 함수 #################################
 
@@ -80,7 +81,7 @@ def get_n_tokens(tokens, n):
     return result
 
 
-def get_filtered_tf(documents, n_min, n_max):
+def get_filtered_tf(n_min, n_max):
     '''
     전체 토큰 중 길이가 start이상이고 end보다 작은 토큰들의 빈도수가 기록된 
     딕셔너리 리스트를 반환한다.
@@ -90,9 +91,10 @@ def get_filtered_tf(documents, n_min, n_max):
     n_min - 토큰 길이 최솟값 
     n_max - 토큰 길이의 상한값 (excluded)
     '''
-    result = []
+    global VALID_ARTICLES
     # fij 계산
-    for document in documents:
+    invalid_paths = []
+    for path, document in VALID_ARTICLES.items():
         frequencies = {}
         for token in document:
             if n_min <= len(token) < n_max:
@@ -100,10 +102,16 @@ def get_filtered_tf(documents, n_min, n_max):
                     frequencies[token] = 1
                 else:
                     frequencies[token] += 1
-        # 기사의 모든 토큰이 n_min보다 짧은 경우
         if len(frequencies) > 0:
-            result.append(frequencies)
-    return result
+            VALID_ARTICLES[path] = frequencies
+        # 기사의 모든 토큰이 n_min보다 짧은 경우
+        else:
+            invalid_paths.append(path)
+            print(f'discard \033[31m{path}\033[0m')
+
+    # n_min 이하의 토큰으로만 구성된 기사 제거
+    for p in invalid_paths:
+        del VALID_ARTICLES[p]
 
 
 def is_reducable(term1, term2):
@@ -163,17 +171,15 @@ def reduce(term_frequencies):
             result[term] = term_frequencies[term]
     return result
 
-def normalize_frequency(documents):
+
+def normalize_frequency(document):
     '''
     토큰의 빈도를 최대값으로 나눈다.
-    documents - {term: freq} 딕셔너리 배열 (각 원소는 하나의 문서에 대응)
+    document - {term: freq} 딕셔너리(기사 한 개)
     '''
-    for document in documents:
-        max_freq = max(document.values())
-        for term, freq in document.items():
-            document[term] = freq/max_freq
-    return documents
-
+    max_freq = max(document.values())
+    for term, freq in document.items():
+        document[term] = freq/max_freq
 
 def get_idf(documents):
     '''
@@ -287,6 +293,7 @@ def print_stage_info(stage):
 
 ############################# main #############################
 if __name__ == "__main__":
+    print(VALID_ARTICLES)
     presses = get_presses()
     documents_tokens = []
     count_article = 0
@@ -296,7 +303,6 @@ if __name__ == "__main__":
     documents_tokens - 각 원소가 토큰화된 기사인 리스트 
     (리스트의 크기가 기사의 개수와 일치)
     '''
-    valid_article_paths = []
     for press in presses:
         paths_to_article = get_paths_to_article(press)
         for path in paths_to_article:
@@ -306,8 +312,7 @@ if __name__ == "__main__":
                 if len(body) == 0:
                     print(path)
                     continue
-                valid_article_paths.append(path)
-                documents_tokens.append(tokenize(body))
+                VALID_ARTICLES[path] = tokenize(body)
                 count_article += 1
             except Exception as error:
                 print(f'[{error}]: {path}')
@@ -317,21 +322,21 @@ if __name__ == "__main__":
     크기가 3~10인 토큰만 남긴다. 
     기사의 모든 토큰이 3보다 작은 경우가 있다.
     '''
-    term_freqs = get_filtered_tf(documents_tokens, 3, 11)
+    get_filtered_tf(3, 11)
     print_stage_info(2)
     '''
     stage 3 - reduce
     적당히 비슷한 토큰을 합친다.
     '''
-    for i, document in enumerate(term_freqs):
-        term_freqs[i] = reduce(reduce(document))
-        # term_freqs[i] = reduce(document)
+    for path, document in VALID_ARTICLES.items():
+        VALID_ARTICLES[path] = reduce(reduce(document))
     print_stage_info(3)
     '''
     stage 4 - normalize
     모든 토큰의 TF값 계산
     '''
-    term_freqs = normalize_frequency(term_freqs)
+    for path, document in VALID_ARTICLES.items():
+        normalize_frequency(document) 
     print_stage_info(4)
     '''
     stage 5 - IDF
@@ -349,15 +354,18 @@ if __name__ == "__main__":
     end_time = time.time()          # [dev]
     # print
     total_token_count = 0
-    for i, document in enumerate(term_freqs):
-        print('%-64s==========='%valid_article_paths[i])
+    keyword_count = 0
+    for path, document in VALID_ARTICLES.items():
+        print('%-64s===========' % path)
         for term, freq in document.items():
             if freq > 0.3:
                 print('%-10s : %-0.3f' % (term, freq)) 
+                keyword_count += 1
         total_token_count += len(document)
         print()
     print()
     print(f"analyzed {count_article} articles.")
-    print("기사 한 개당 평균 토큰 개수: %0.1f" % (total_token_count/len(term_freqs)))
+    print("기사 한 개당 평균 토큰 개수: %0.1f" % (total_token_count/len(VALID_ARTICLES)))
     print('전체 토큰 개수: %d' % total_token_count)
+    print(f'추출된 keyword 개수 {keyword_count}')
     print("elapsed time: %0.2f" % (end_time - start_time))
