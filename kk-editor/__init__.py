@@ -1,5 +1,7 @@
 from flask import Flask
 
+import core.crawler.main
+
 # blueprint
 from . api import v1
 
@@ -11,7 +13,12 @@ def create_app():
     @app.route('/')
     def hello_editor():
         return 'Hello editor!'
-    
+
+    @app.route('/crawl')
+    def start_crawl():
+        core.crawler.main.start_crawl()
+
+
     app.register_blueprint(v1.bp)
 
     return app
