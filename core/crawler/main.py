@@ -74,6 +74,3 @@ def start_crawl():
     end = time.time()
     sec = end - start
     print(datetime.timedelta(seconds=sec))
-
-
-start_crawl()
