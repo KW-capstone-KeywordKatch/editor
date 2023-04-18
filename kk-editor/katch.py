@@ -6,6 +6,9 @@
 import os
 import sys
 import subprocess
+import pty
+import errno
+from time import sleep
 
 #################### Status ######################
 SYNC_DEP = False
@@ -13,16 +16,37 @@ EXECUTE_APP = False
 INTEGRATE = False
 ##################################################
 
+
 ################## ANSI control ##################
+
+GREET_VENV = r"""
+ __     ___      _               _                   _                                      _
+ \ \   / (_)_ __| |_ _   _  __ _| |   ___ _ ____   _(_)_ __ ___  _ __  _ __ ___   ___ _ __ | |_
+  \ \ / /| | '__| __| | | |/ _` | |  / _ \ '_ \ \ / / | '__/ _ \| '_ \| '_ ` _ \ / _ \ '_ \| __|
+   \ V / | | |  | |_| |_| | (_| | | |  __/ | | \ V /| | | | (_) | | | | | | | | |  __/ | | | |_
+    \_/  |_|_|   \__|\__,_|\__,_|_|  \___|_| |_|\_/ |_|_|  \___/|_| |_|_| |_| |_|\___|_| |_|\__|
+
+"""
+
+GREET_APP = r"""
+  _  ___  __                   _ _ _
+ | |/ / |/ /           ___  __| (_) |_ ___  _ __
+ | ' /| ' /   _____   / _ \/ _` | | __/ _ \| '__|
+ | . \| . \  |_____| |  __/ (_| | | || (_) | |
+ |_|\_\_|\_\          \___|\__,_|_|\__\___/|_|
+"""
+
 # 한 줄을 비우고 커서를 맨 앞으로 이동
 def _clear_line(msg):
     print("\033[2K\r" + msg)
 
 # 터미널에 출력되는 텍스트 색 설정
-def _print_with_color(color, msg):
+def _print_with_color(color, msg, clear=False):
     """
     color - "green", "red"
     """
+    if clear:
+        print("\033[2J\033[H")
     if color == 'green':
         print("\033[32m", end='')
         print(msg)
@@ -31,11 +55,15 @@ def _print_with_color(color, msg):
         print("\033[31m", end='')
         print(msg)
         print("\033[0m", end='')
+    elif color == 'blue':
+        print("\033[34;1m", end='')
+        print(msg)
+        print("\033[0m", end='')
 
 ##################################################
 
-def _call(cmd, silent=False):
-    return subprocess.call(cmd, shell=True)
+def _call(cmd, cwd=None):
+    return subprocess.call(cmd, shell=True, cwd=cwd)
 
 
 # 플라스크 애플리케이션 실행을 위한 환경 변수 설정
@@ -45,15 +73,9 @@ def _set_environ():
     os.environ["FLASK_RUN_PORT"] = "8000"
 
 
-# 파이썬 가상 환경 진입
-def _enter_venv():
-    _print_with_color('green', 'enter to virtual environment\n')
-    _call("pipenv shell")
-
-
 # 가상환경을 구성하는 패키지 설치
-def _fetch_dependencies():
-    _call("pipenv install")
+def _sync_dependencies():
+    _call("pipenv sync")
 
 
 # 명령어 파싱, 상태 설정
@@ -65,21 +87,17 @@ def _parse(argv):
     if 'execute' in argv:
         EXECUTE_APP = True
 
-
 def main(argv):
     _parse(argv)
-    # 의존성 설치 및 가상환경 진입
+    # 의존성 설치
     if SYNC_DEP:
-        print("fetch dependencies... ")
-        _fetch_dependencies()
-        _enter_venv()
+        print("sync dependencies... ")
+        _sync_dependencies()
     # 플라스크 애플리케이션 실행
     if EXECUTE_APP:
+        _print_with_color('blue', GREET_APP, clear=True)
         _set_environ()
-        # 프로젝트 루트 디렉토리에서 실행되도록 보장되어야 한다.
-        os.chdir("..")
-        print(os.getcwd())
-        _call("flask run")
+        _call("flask run", cwd=os.sep.join(os.getcwd().split(os.sep)[:-1]))
 
 if __name__ == "__main__":
     try: 
