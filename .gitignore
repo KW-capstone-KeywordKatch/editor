@@ -6,3 +6,6 @@ __pycache__/**
 
 # debugging
 .vimspector.json
+
+# idea and editor
+.idea/**
