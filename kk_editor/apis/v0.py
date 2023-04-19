@@ -6,7 +6,7 @@ from flask_restx import Namespace, Resource, fields
 from flask import request
 from core.analyzer import analyzer
 from kk_editor import db
-from models import Article
+from kk_editor.models import Article
 
 
 api = Namespace('v0', description='prototype operations')

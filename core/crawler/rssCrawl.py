@@ -384,8 +384,9 @@ def db_save_articles(entries, company, get_encoding, db, Article, last_crawl):
 
 
         # 이미 크롤링 한 기사라면 종료
-        if last_crawl >= date:
-            break
+        if last_crawl:
+            if last_crawl >= date:
+                break
 
 
         try:

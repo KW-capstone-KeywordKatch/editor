@@ -30,5 +30,5 @@ def collect():
 
 
 scheduler = BackgroundScheduler()
-scheduler.add_job(func=collect, trigger='cron', hours='*', minute='0')
+scheduler.add_job(func=collect, trigger='cron', hour='*', minute='8')
 scheduler.start()

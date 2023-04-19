@@ -30,7 +30,7 @@ import core.crawler.rssCrawl
 #              "http://rss.edaily.co.kr/edaily_news.xml": "edaily",
 #              "https://www.fnnews.com/rss/r20/fn_realnews_all.xml": "financial",
 #              "https://www.mbn.co.kr/rss/": "mbn"}
-companies = {"https://fs.jtbc.co.kr/RSS/newsflash.xml": "jtbc"}
+companies = {"https://www.hani.co.kr/rss/": "hankyoreh"}
 
 
 def start_crawl(db, Article, last_crawl):
@@ -60,7 +60,7 @@ def start_crawl(db, Article, last_crawl):
 
         ###### 출력 테스트 ######
         # print_articles(entries, company, res.encoding)
-        core.crawler.rssCrawl.print_articles(entries, company, res.encoding)
+        # core.crawler.rssCrawl.print_articles(entries, company, res.encoding)
 
 
         ###### 저장 테스트 #####
@@ -68,7 +68,7 @@ def start_crawl(db, Article, last_crawl):
         # count += core.crawler.rssCrawl.save_articles(entries, company, res.encoding)
 
         ##### DB 저장 #####
-        # count += core.crawler.rssCrawl.db_save_articles(entries, company, res.encoding, db, Article, last_crawl)
+        count += core.crawler.rssCrawl.db_save_articles(entries, company, res.encoding, db, Article, last_crawl)
         print("-----------------------------------------------------------")
 
 

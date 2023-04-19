@@ -1,5 +1,5 @@
 from flask_restx import Api
-from apis.v0 import api as ns0
+from .v0 import api as ns0
 
 api = Api(
     title='prototype rest-api',
