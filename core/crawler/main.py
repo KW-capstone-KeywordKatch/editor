@@ -30,7 +30,7 @@ import core.crawler.rssCrawl
 #              "http://rss.edaily.co.kr/edaily_news.xml": "edaily",
 #              "https://www.fnnews.com/rss/r20/fn_realnews_all.xml": "financial",
 #              "https://www.mbn.co.kr/rss/": "mbn"}
-companies = {"https://www.mk.co.kr/rss/40300001/": "maeil", "https://rss.donga.com/total.xml": "donga"}
+companies = {"https://news.sbs.co.kr/news/SectionRssFeed.do?sectionId=01&plink=RSSREADER": "sbs"}
 # companies = {"https://fs.jtbc.co.kr/RSS/newsflash.xml": "jtbc", "https://www.khan.co.kr/rss/rssdata/total_news.xml": "kyunghyang"}
 
 def start_crawl(db, Article):

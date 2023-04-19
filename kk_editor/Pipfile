@@ -8,6 +8,10 @@ flask = "*"
 flask-restx = "*"
 flask-migrate = "*"
 pymysql = "*"
+feedparser = "*"
+requests = "*"
+beautifulsoup4 = "*"
+
 
 [dev-packages]
 
