@@ -9,3 +9,9 @@ __pycache__/**
 
 # idea and editor
 .idea/**
+
+# config & secret
+config/**
+
+# development environment
+article.db
