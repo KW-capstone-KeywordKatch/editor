@@ -11,7 +11,7 @@ __pycache__/**
 .idea/**
 
 # config & secret
-config/**
+kk_editor/config/**
 
 # development environment
 article.db

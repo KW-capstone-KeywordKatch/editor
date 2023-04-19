@@ -13,6 +13,7 @@ from time import sleep
 #################### Status ######################
 SYNC_DEP = False
 EXECUTE_APP = False
+SETUP = True
 INTEGRATE = False
 ##################################################
 
@@ -46,19 +47,19 @@ def _print_with_color(color, msg, clear=False):
     color - "green", "red"
     """
     if clear:
-        print("\033[2J\033[H")
+        print("\033[2J\033[H", end='')
     if color == 'green':
         print("\033[32m", end='')
         print(msg)
-        print("\033[0m", end='')
+        print("\033[0m")
     elif color == 'red':
         print("\033[31m", end='')
         print(msg)
-        print("\033[0m", end='')
+        print("\033[0m")
     elif color == 'blue':
         print("\033[34;1m", end='')
         print(msg)
-        print("\033[0m", end='')
+        print("\033[0m")
 
 ##################################################
 
@@ -68,7 +69,7 @@ def _call(cmd, cwd=None):
 
 # 플라스크 애플리케이션 실행을 위한 환경 변수 설정
 def _set_environ():
-    os.environ["FLASK_APP"] = "kk-editor"
+    os.environ["FLASK_APP"] = "kk_editor"
     os.environ["FLASK_DEBUG"] = "1"
     os.environ["FLASK_RUN_PORT"] = "8000"
 
@@ -82,6 +83,9 @@ def _sync_dependencies():
 def _parse(argv):
     global SYNC_DEP
     global EXECUTE_APP
+    global SETUP
+    if 'setup' in argv:
+        SETUP = True
     if 'sync' in argv:
         SYNC_DEP = True
     if 'execute' in argv:
@@ -89,6 +93,11 @@ def _parse(argv):
 
 def main(argv):
     _parse(argv)
+    # import 경로 추가
+    if SETUP:
+        p = os.path.dirname(__file__)
+        sys.path.append(p)
+        sys.path.append(os.path.sep.join(p.split(os.path.sep)[:-1]))
     # 의존성 설치
     if SYNC_DEP:
         print("sync dependencies... ")
