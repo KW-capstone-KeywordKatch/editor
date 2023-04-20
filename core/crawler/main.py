@@ -37,7 +37,20 @@ def start_crawl(db, Article, last_crawl):
     count = 0
     for url, company in companies.items() :
         #먼저 받아옴
-        res = requests.get(url)
+        for i in range(4):
+            try:
+                res = requests.get(url)
+                res.raise_for_status()
+            except:
+                print(f"RSS 연결 실패. 재시도 중...{i+1}")
+                time.sleep(3)
+            else:
+                # 연결 성공
+                break
+        else:
+            print("RSS 연결 실패. 다음 언론사로 넘어감...")
+            continue
+
         html = res.text
 
         #인코딩 방식 추출
