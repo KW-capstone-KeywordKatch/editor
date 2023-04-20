@@ -1,6 +1,8 @@
 from kk_editor import db
 
 class Article(db.Model):
+    # 스키마 변경 허용
+    __table_args__ = {'extend_existing': True}
     id = db.Column(db.Integer, primary_key=True)
     time = db.Column(db.String(20), unique=False, nullable=False)
     company = db.Column(db.String(20), unique=False, nullable=False)
