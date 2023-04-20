@@ -70,7 +70,7 @@ def _call(cmd, cwd=None):
 # 플라스크 애플리케이션 실행을 위한 환경 변수 설정
 def _set_environ():
     os.environ["FLASK_APP"] = "kk_editor"
-    os.environ["FLASK_DEBUG"] = "1"
+    os.environ["FLASK_DEBUG"] = "0"
     os.environ["FLASK_RUN_PORT"] = "8000"
 
 

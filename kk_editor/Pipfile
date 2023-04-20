@@ -11,6 +11,7 @@ pymysql = "*"
 feedparser = "*"
 requests = "*"
 beautifulsoup4 = "*"
+apscheduler = "*"
 
 
 [dev-packages]

@@ -30,10 +30,10 @@ import core.crawler.rssCrawl
 #              "http://rss.edaily.co.kr/edaily_news.xml": "edaily",
 #              "https://www.fnnews.com/rss/r20/fn_realnews_all.xml": "financial",
 #              "https://www.mbn.co.kr/rss/": "mbn"}
-companies = {"https://news.sbs.co.kr/news/SectionRssFeed.do?sectionId=01&plink=RSSREADER": "sbs"}
-# companies = {"https://fs.jtbc.co.kr/RSS/newsflash.xml": "jtbc", "https://www.khan.co.kr/rss/rssdata/total_news.xml": "kyunghyang"}
+companies = {"https://fs.jtbc.co.kr/RSS/newsflash.xml": "jtbc"}
 
-def start_crawl(db, Article):
+
+def start_crawl(db, Article, last_crawl):
     start = time.time()
     count = 0
     for url, company in companies.items() :
@@ -60,7 +60,7 @@ def start_crawl(db, Article):
 
         ###### 출력 테스트 ######
         # print_articles(entries, company, res.encoding)
-        # core.crawler.rssCrawl.print_articles(entries, company, res.encoding)
+        core.crawler.rssCrawl.print_articles(entries, company, res.encoding)
 
 
         ###### 저장 테스트 #####
@@ -68,7 +68,7 @@ def start_crawl(db, Article):
         # count += core.crawler.rssCrawl.save_articles(entries, company, res.encoding)
 
         ##### DB 저장 #####
-        count += core.crawler.rssCrawl.db_save_articles(entries, company, res.encoding, db, Article)
+        # count += core.crawler.rssCrawl.db_save_articles(entries, company, res.encoding, db, Article, last_crawl)
         print("-----------------------------------------------------------")
 
 
@@ -78,5 +78,8 @@ def start_crawl(db, Article):
     sec = end - start
     print(datetime.timedelta(seconds=sec))
 
-    return count, str(datetime.timedelta(seconds=sec))
+    now = time
+    last = now.strftime('%Y%m%d%H%M%S')[2:]
+
+    return count, str(datetime.timedelta(seconds=sec)), last
 

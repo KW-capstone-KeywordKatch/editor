@@ -14,8 +14,9 @@ from kk_editor.config import config_prod as config
 # 모델 클래스 정의
 db = SQLAlchemy()
 
-
+global app
 def create_app():
+    global app
     # Flask application 생성
     app = Flask(__name__)
 

@@ -19,6 +19,12 @@ def date_format(date, company):
         clock = ''.join(date[1].split(':')) + '00'
         return yymmdd + clock
 
+    elif company == "kukmin":
+        date = list(date.split())
+        yymmdd = ''.join(date[-2].split('-'))[2:]
+        clock = ''.join(date[-1].split(':')) + '00'
+        return yymmdd + clock
+
     elif company == 'kyunghyang':
         date = list(date.split())[2:]
         yymmdd = ''.join(date[0].split('.'))[2:]
@@ -67,6 +73,7 @@ def find_img(soup, company, link):
 
 
 def print_articles(entries, company, get_encoding):
+    entries = entries[::-1]
     for entry in entries:
         title = entry["title"]
         link = entry["link"]
@@ -125,6 +132,10 @@ def print_articles(entries, company, get_encoding):
         #### 국민일보, 매일경제, 머니투데이, 헤럴드경제, 이데일리, mbn, 동아일보 본문 ####
         elif company in ["kukmin", "maeil", "moneytoday", "herald", "edaily", "mbn", "donga"] :
             content = soup.find("div", attrs={"itemprop": "articleBody"})
+
+            if company == "kukmin":
+                date = soup.findAll("div", attrs={"class":"date"})[-1]
+                date = date_format(date.text, company)
 
             if company == "donga":
                 # 동아일보 본문만 남기고 좋아요 구독 같은 거 없애줌
@@ -274,14 +285,13 @@ def save_articles(entries, company, get_encoding):
 
     return count
 
-def db_save_articles(entries, company, get_encoding, db, Article):
+def db_save_articles(entries, company, get_encoding, db, Article, last_crawl):
+    # 경향은 뒤에부터
+    if company == "kyunghyang":
+        entries = entries[::-1]
+
     count = 0
     for entry in entries:
-        # id 생성
-        now = datetime.now()
-        id = now.strftime('%Y%m%d%H%M%S')
-        id += str(now.microsecond)
-
         title = entry["title"]
         link = entry["link"]
         try:
@@ -340,6 +350,10 @@ def db_save_articles(entries, company, get_encoding, db, Article):
         elif company in ["kukmin", "maeil", "moneytoday", "herald", "edaily", "mbn", "donga"] :
             content = soup.find("div", attrs={"itemprop": "articleBody"})
 
+            if company == "kukmin":
+                date = soup.findAll("div", attrs={"class":"date"})[-1]
+                date = date_format(date.text, company)
+
             if company == "donga":
                 # 동아일보 본문만 남기고 좋아요 구독 같은 거 없애줌
                 content.find(attrs={"class": "article_footer"}).decompose()
@@ -368,10 +382,18 @@ def db_save_articles(entries, company, get_encoding, db, Article):
             if content == None:
                 content = soup.find("div", attrs={"itemprop": "articleBody"})
 
+
+        # 이미 크롤링 한 기사라면 종료
+        if last_crawl >= date:
+            break
+
+
         try:
-            article = Article(date, company, title, content.getText().strip(), img)
-            db.session.add(article)
-            db.session.commit()
+            article = Article(date, company, title, content.getText().strip(), img, link)
+            from kk_editor import app
+            with app.app_context():
+                db.session.add(article)
+                db.session.commit()
             count += 1
         except:
             print(title + "      저장 오류       " + link)
