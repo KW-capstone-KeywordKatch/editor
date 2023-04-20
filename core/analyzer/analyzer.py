@@ -19,7 +19,7 @@ KEYWORD_MAP = []    # [keyword, freq, [article id 리스트]]
 
 def fetch_articles(db, Article):
     global ARTICLES
-    result = Article.query.all()
+    result = Article.query.limit(1000).all()
     ARTICLES = {article.id: article for article in result}
 
 
@@ -57,9 +57,9 @@ def tokenize(content):
         if len(word) > 0:
             # 명사에 붙는 조사 제거
             if len(word) > 1 and word[-1] in postposition:
-                result.append(word[:-1])
+                result.append(word[:-1].lower())
             else:
-                result.append(word)
+                result.append(word.lower())
     return result
 
 
@@ -320,8 +320,6 @@ def collect_keyword(db, Keywords):
                 total_tokens[t][IDs].append(str(art_id))
             else:
                 total_tokens[t] = [1, [str(art_id)]]
-    end = time.time()
-    print(f'[collect_keyword] elapsed time: {round(end-start, 3)}s')
     # 결과 저장
     data = [Keywords(k, info[C], ' '.join(info[IDs])) for k, info in total_tokens.items()]
     try:
@@ -332,6 +330,9 @@ def collect_keyword(db, Keywords):
             db.session.commit()
     except Exception as e:
         print(f'[EROR] [collect_keyword]: {e}')
+    end = time.time()
+    print(f'[collect_keyword] elapsed time: {round(end-start, 3)}s')
+    
 
 
 def recommend_by_keyword(keyword, Keywords, Article):
