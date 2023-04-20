@@ -16,3 +16,4 @@ kk_editor/config/**
 # for development
 article.db
 logs/**
+migrations/**
