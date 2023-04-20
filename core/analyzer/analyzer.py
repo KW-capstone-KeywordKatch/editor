@@ -14,6 +14,7 @@ from kk_editor import db
 KEYWORD = dict()
 ARTICLES = dict()   # {id: Article}
 TOKENS = dict()     # {id: [tokens]}
+KEYWORD_MAP = []    # [keyword, freq, [article id 리스트]]
 
 
 def fetch_articles(db, Article):
@@ -27,7 +28,7 @@ def refine(content):
     의미 없는 기호(탈출문자, 구두점 등)를 제거한다.
     '''
     # 줄바꿈, 괄호 공백으로 변환
-    content = re.sub('[\t\n()=.<>◇\[\]"“‘”’·○▲△▷▶\-,\']', ' ', content)           
+    content = re.sub('[\t\n()=.<>◇\[\]"“‘”’·■○▲△▷▶\-,\']', ' ', content)           
     # 대괄호, 큰따옴표, 작은따옴표 제거
     # content = re.sub('[\[\]"“‘”’·○▲△▷,\']', '', content)       
     return content
@@ -225,13 +226,6 @@ def print_stage_info(stage):
     print('[stage%d] %15s is done.' % (stage, stage_name))
 
 
-def collect_keyword():
-    """
-    분석된 모든 기사를 키워드로 묶는다.
-    {키워드: [freq, Article]} 형태의 딕셔너리를 초기화한다.
-    """
-
-
 def extract_keyword(db, Article):
     """
     메모리에 로드된 기사들에서 키워드를 추출한다.
@@ -277,16 +271,7 @@ def extract_keyword(db, Article):
         normalize_frequency(art_id, tokens) 
     # print_stage_info(4)
     '''
-    stage 5 - IDF
-    모든 토큰의 IDF 계산 
-    O(T*N) N은 문서의 개수, T는 모든 토큰의 개수 
-    139565 * 1178
-    '''
-    # inverse_doc_freqs = get_idf(term_freqs)
-    # print_stage_info(5)
-    end_time = time.time()          # [dev]
-    '''
-    stage 6 - 점수가 높은 토큰만 남긴다.
+    stage 5 - 점수가 높은 토큰만 남긴다.
     TOKENS = {id: {token: score}}
     '''
     # print
@@ -301,10 +286,13 @@ def extract_keyword(db, Article):
                 useful[t] = f
         TOKENS[art_id] = useful
         total_token_count += len(tokens)
+    end_time = time.time()          # [dev]
+    '''
     for i, tokens in TOKENS.items():
         print(f'{ARTICLES[i].title}')
         for t, f in tokens.items():
             print(f'{t}: {f}')
+    '''
 
     print(f"analyzed {count_article} articles.")
     print("기사 한 개당 평균 토큰 개수: %0.1f" % (total_token_count/len(TOKENS)))
@@ -313,3 +301,53 @@ def extract_keyword(db, Article):
     print("elapsed time: %0.2f" % (end_time - start_time))
     print('---------------------------------------------')
     sys.stdout.flush()
+
+
+def collect_keyword(db, Keywords):
+    """
+    분석된 모든 기사를 키워드로 묶는다.
+    KEYWORD_MAP = [키워드, freq, [Article 리스트]]
+    TOKENS = {id: {token: score}}
+    total_tokens = {token: [count, [art_id]]}
+    """
+    C, IDs = 0, 1
+    start = time.time()
+    total_tokens = dict()
+    for art_id, tokens in TOKENS.items():
+        for t, score in tokens.items():
+            if t in total_tokens:
+                total_tokens[t][C] += 1
+                total_tokens[t][IDs].append(str(art_id))
+            else:
+                total_tokens[t] = [1, [str(art_id)]]
+    end = time.time()
+    print(f'[collect_keyword] elapsed time: {round(end-start, 3)}s')
+    # 결과 저장
+    data = [Keywords(k, info[C], ' '.join(info[IDs])) for k, info in total_tokens.items()]
+    try:
+        from kk_editor import app
+        with app.app_context():
+            for d in data:
+                db.session.add(d)
+            db.session.commit()
+    except Exception as e:
+        print(f'[EROR] [collect_keyword]: {e}')
+
+
+def recommend_by_keyword(keyword, Keywords, Article):
+    data = Keywords.query.filter(Keywords.keyword==keyword).one()
+    print(f'[{datetime.datetime.now()}][API 호출]recommend for {keyword}')
+    print(f'rank: {data.rank} article_id: {data.articles}')
+    art_ids = list(map(int, data.articles.split(' ')))
+    # fetch articles from DB
+    articles = []
+    for i in art_ids:
+        articles.append(Article.query.filter(Article.id==i).one())
+    # 클라이언트에게 반환할 객체 생성
+    result = []
+    for article in articles:
+        tmp = {'title': article.title, 'link': article.link}
+        result.append(tmp)
+    sys.stdout.flush()
+    return result
+
