@@ -13,5 +13,6 @@
 # config & secret
 kk_editor/config/**
 
-# development environment
+# for development
 article.db
+logs/**
