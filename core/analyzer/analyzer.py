@@ -6,30 +6,20 @@ import sys
 import re
 import time
 import math
+import datetime
 
-ARTICLE_ARCHIVE_PATH = '/Users/mingeun/articles/'
-FREQUENT_SPECIAL_CHARS = ['▲', '=']
-VALID_ARTICLES = dict()
+from models import Article
+from kk_editor import db
 
-################################# 자체 제작 함수 #################################
-
-def read_article(file_path):
-    '''
-    전달 받은 경로의 기사를 메모리로 읽어 본문을 문자열 형태로 반환한다.
-    '''
-    with open(file_path, 'r', encoding='utf-8') as f:
-        body = f.read()
-    return body
+KEYWORD = dict()
+ARTICLES = dict()   # {id: Article}
+TOKENS = dict()     # {id: [tokens]}
 
 
-def get_paths_to_article(press):
-    '''
-    해당 언론사의 모든 기사 파일 제목(절대 경로 아님)을 리스트 형태로 반환한다.
-    press - 언론사 이름
-    '''
-    paths  = [ARTICLE_ARCHIVE_PATH + press + '/' + file \
-            for file in os.listdir(ARTICLE_ARCHIVE_PATH + press) if file[0]!='.']
-    return paths
+def fetch_articles(db, Article):
+    global ARTICLES
+    result = Article.query.all()
+    ARTICLES = {article.id: article for article in result}
 
 
 def refine(content):
@@ -59,17 +49,16 @@ def tokenize(content):
     '''
     기사의 본문(content)를 토큰화하여 반환한다.
     '''
+    postposition = set(['에', '을', '를', '은', '는', '이', '가', '게', '의', '와'])
     tokens = refine(content)
-    tokens = [word  for word in tokens.split(' ') if len(word)>0]
-
-    return tokens
-
-
-def get_presses():
-    '''
-    언론사 목록 획득
-    '''
-    result = [press for press in os.listdir(ARTICLE_ARCHIVE_PATH) if press[0] != '.']
+    result = []
+    for word in tokens.split(' '):
+        if len(word) > 0:
+            # 명사에 붙는 조사 제거
+            if len(word) > 1 and word[-1] in postposition:
+                result.append(word[:-1])
+            else:
+                result.append(word)
     return result
 
 
@@ -83,35 +72,32 @@ def get_n_tokens(tokens, n):
 
 def get_filtered_tf(n_min, n_max):
     '''
-    전체 토큰 중 길이가 start이상이고 end보다 작은 토큰들의 빈도수가 기록된 
-    딕셔너리 리스트를 반환한다.
-    반환된 배열은 
-    [{token: f, token: f, ...}, {token: f, token: f, ...}, ...] 형태이다.
-    documents - 원소가 하나의 문서에서 추출한 모든 토큰 리스트인 리스트 
+    TOKENS에 저장된 토큰들 중 길이가 n_mix 이상, n_max 미만인 것만 남긴다.
     n_min - 토큰 길이 최솟값 
     n_max - 토큰 길이의 상한값 (excluded)
     '''
-    global VALID_ARTICLES
-    # fij 계산
-    invalid_paths = []
-    for path, document in VALID_ARTICLES.items():
-        frequencies = {}
-        for token in document:
+    global TOKENS
+    global ARTICLES
+    invalid_ids = []
+    for art_id, tokens in TOKENS.items():
+        # fij 계산
+        # {token: 빈도수}
+        freq = dict()
+        for token in tokens:
             if n_min <= len(token) < n_max:
-                if token not in frequencies:
-                    frequencies[token] = 1
+                if token not in freq:
+                    freq[token] = 1
                 else:
-                    frequencies[token] += 1
-        if len(frequencies) > 0:
-            VALID_ARTICLES[path] = frequencies
-        # 기사의 모든 토큰이 n_min보다 짧은 경우
-        else:
-            invalid_paths.append(path)
-            print(f'discard \033[31m{path}\033[0m')
-
-    # n_min 이하의 토큰으로만 구성된 기사 제거
-    for p in invalid_paths:
-        del VALID_ARTICLES[p]
+                    freq[token] += 1
+        if len(freq) == 0:
+            # n_min, n_max 사이 크기의 토큰이 없는 경우
+            invalid_ids.append(art_id)
+            print(f'discard \033[31m{art_id}\033[0m')
+        TOKENS[art_id] = freq
+# n_min 미만, n_max 이상인 토큰으로만 구성된 기사 제거
+    for i in invalid_ids:
+        del ARTICLES[i]
+        del TOKENS[i]
 
 
 def is_reducable(term1, term2):
@@ -172,31 +158,19 @@ def reduce(term_frequencies):
     return result
 
 
-def normalize_frequency(document):
+def normalize_frequency(art_id, tokens):
     '''
     토큰의 빈도를 최대값으로 나눈다.
-    document - {term: freq} 딕셔너리(기사 한 개)
+    tokens - {term: freq} 딕셔너리(기사 한 개)
     '''
-    max_freq = max(document.values())
-    for term, freq in document.items():
-        document[term] = freq/max_freq
+    max_freq = max(tokens.values())
+    for t, f in tokens.items():
+        # 제목에 등장한 키워드 가중치
+        if t in ARTICLES[art_id].title:
+            tokens[t] = round(f/max_freq*(1.2), 2)
+        else:
+            tokens[t] = round(f/max_freq, 2)
 
-def get_idf(documents):
-    '''
-    모든 토큰의 IDF값을 구하여 반환한다.
-    '''
-    result = []
-    N = len(documents)  # 문서 개수
-    for document in documents:
-        idf = dict()
-        for term in document.keys():
-            n = 0
-            for doc in documents:
-                if term in doc:
-                    n += 1
-            idf[term] = math.log2(N/n)
-        result.append(idf)
-    return result
 
 
 def get_df(documents):
@@ -234,46 +208,6 @@ def tf_idf_score(tf, idf):
     return result
 
 
-######################## for dev ###############################
-
-def print_distribution(tokens):
-    '''
-    토큰 길이별 개수 출력   
-    '''
-    max_len = len(tokens[0])
-    min_len = len(tokens[0])
-    for token in tokens:
-        token_len = len(token)
-        if max_len < token_len:
-            max_len = token_len
-        if min_len > token_len:
-            min_len = token_len
-    frequencies = [0]*(max_len+1)
-    total_count = len(tokens)
-    for token in tokens:
-        frequencies[len(token)] += 1
-    for i, n in enumerate(frequencies):
-        print("%2d-length token: %5d (%.2f%%)" % (i, n, (n/total_count)*100))
-
-def print_n_tokens(tokens, n):
-    '''
-    길이가 n인 모든 토큰 출력
-    '''
-    for token in tokens:
-        if len(token) == n:
-            print(token)
-    print()
-
-
-def print_token_score(score):
-    count = 0
-    for t, s in score.items():
-        if s>1:
-            count += 1
-            print("%-4s : %-5d" % (t, s))
-    print(f'2번 이상 등장한 토큰의 개수: {count}')
-
-
 def print_stage_info(stage):
     stage_name = 'unnamed'
     if stage == 1:
@@ -287,57 +221,61 @@ def print_stage_info(stage):
     elif stage == 5:
         stage_name = 'IDF'
     elif stage == 6:
-        stage_name = 'TF*IDF'
+        stage_name = 'prunning'
     print('[stage%d] %15s is done.' % (stage, stage_name))
 
 
-############################# main #############################
-if __name__ == "__main__":
-    print(VALID_ARTICLES)
-    presses = get_presses()
-    documents_tokens = []
+def collect_keyword():
+    """
+    분석된 모든 기사를 키워드로 묶는다.
+    {키워드: [freq, Article]} 형태의 딕셔너리를 초기화한다.
+    """
+
+
+def extract_keyword(db, Article):
+    """
+    메모리에 로드된 기사들에서 키워드를 추출한다.
+    """
+    global TOKENS
+    print(f'[{datetime.datetime.now()}]')
     count_article = 0
     start_time = time.time()        # [dev] 
     ''' 
-    stage 1 - 모든 기사를 읽어 토큰화한다.
+    stage 1 - 모든 기사를 토큰화한다.
     documents_tokens - 각 원소가 토큰화된 기사인 리스트 
     (리스트의 크기가 기사의 개수와 일치)
+    TOKENS = {id: [token]}
     '''
-    for press in presses:
-        paths_to_article = get_paths_to_article(press)
-        for path in paths_to_article:
-            try:
-                body = read_article(path)
-                # 기사 파일만 있고 내용이 없는 경우 패스
-                if len(body) == 0:
-                    print(path)
-                    continue
-                VALID_ARTICLES[path] = tokenize(body)
-                count_article += 1
-            except Exception as error:
-                print(f'[{error}]: {path}')
-    print_stage_info(1)
+    fetch_articles(db, Article)
+    tmp = []
+    for art_id, article in ARTICLES.items():
+        if len(article.content) == 0:
+            continue
+        TOKENS[art_id] = tokenize(article.content)
+        count_article += 1
+    # print_stage_info(1)
     '''
     stage 2 - filter
     크기가 3~10인 토큰만 남긴다. 
-    기사의 모든 토큰이 3보다 작은 경우가 있다.
+    기사의 모든 토큰이 3보다 작은 경우가 있음에 주의.
     '''
     get_filtered_tf(3, 11)
-    print_stage_info(2)
+    # print_stage_info(2)
     '''
     stage 3 - reduce
     적당히 비슷한 토큰을 합친다.
+    TOKENS = {article_id: {token: 빈도수}}
     '''
-    for path, document in VALID_ARTICLES.items():
-        VALID_ARTICLES[path] = reduce(reduce(document))
-    print_stage_info(3)
+    for art_id, tokens in TOKENS.items():
+        TOKENS[art_id] = reduce(reduce(tokens))
+    # print_stage_info(3)
     '''
     stage 4 - normalize
     모든 토큰의 TF값 계산
     '''
-    for path, document in VALID_ARTICLES.items():
-        normalize_frequency(document) 
-    print_stage_info(4)
+    for art_id, tokens in TOKENS.items():
+        normalize_frequency(art_id, tokens) 
+    # print_stage_info(4)
     '''
     stage 5 - IDF
     모든 토큰의 IDF 계산 
@@ -346,26 +284,32 @@ if __name__ == "__main__":
     '''
     # inverse_doc_freqs = get_idf(term_freqs)
     # print_stage_info(5)
-    '''
-    stage 6 - TF*IDF 계산
-    '''
-    # scores = tf_idf_score(term_freqs, inverse_doc_freqs)
-    # print_stage_info(6)
     end_time = time.time()          # [dev]
+    '''
+    stage 6 - 점수가 높은 토큰만 남긴다.
+    TOKENS = {id: {token: score}}
+    '''
     # print
     total_token_count = 0
     keyword_count = 0
-    for path, document in VALID_ARTICLES.items():
-        print('%-64s===========' % path)
-        for term, freq in document.items():
-            if freq > 0.3:
-                print('%-10s : %-0.3f' % (term, freq)) 
+    for art_id, tokens in TOKENS.items():
+        # 점수가 기준 이상인 토큰
+        useful = dict()
+        for t, f in tokens.items():
+            if f > 0.3:
                 keyword_count += 1
-        total_token_count += len(document)
-        print()
-    print()
+                useful[t] = f
+        TOKENS[art_id] = useful
+        total_token_count += len(tokens)
+    for i, tokens in TOKENS.items():
+        print(f'{ARTICLES[i].title}')
+        for t, f in tokens.items():
+            print(f'{t}: {f}')
+
     print(f"analyzed {count_article} articles.")
-    print("기사 한 개당 평균 토큰 개수: %0.1f" % (total_token_count/len(VALID_ARTICLES)))
+    print("기사 한 개당 평균 토큰 개수: %0.1f" % (total_token_count/len(TOKENS)))
     print('전체 토큰 개수: %d' % total_token_count)
     print(f'추출된 keyword 개수 {keyword_count}')
     print("elapsed time: %0.2f" % (end_time - start_time))
+    print('---------------------------------------------')
+    sys.stdout.flush()
