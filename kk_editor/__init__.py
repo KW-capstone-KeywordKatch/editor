@@ -15,6 +15,7 @@ from kk_editor.config import config_prod as config
 db = SQLAlchemy()
 
 global app
+
 def create_app():
     global app
     # Flask application 생성
@@ -22,6 +23,7 @@ def create_app():
 
     # DB 설정 파일 입력
     app.config.from_object(config)
+    app.debug = False
     # ORM
     db.init_app(app)
     migrate = Migrate()

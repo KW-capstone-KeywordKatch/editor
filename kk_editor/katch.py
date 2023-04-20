@@ -112,5 +112,7 @@ if __name__ == "__main__":
     try: 
         sys.exit(main(sys.argv))
     except KeyboardInterrupt:
+        from api.v1 import scheduler
+        scheduler.shutdown()
         _clear_line("Bye")
         exit(0)

@@ -399,4 +399,5 @@ def db_save_articles(entries, company, get_encoding, db, Article, last_crawl):
         except:
             print(title + "      저장 오류       " + link)
 
+
     return count

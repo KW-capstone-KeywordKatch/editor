@@ -28,7 +28,6 @@ def collect():
     return f"{count}개 저장 완료.  걸린 시간: {spend_time}   완료 시각: {last_crawl}"
 
 
-
 scheduler = BackgroundScheduler()
-scheduler.add_job(func=collect, trigger='cron', hour='*', minute='8')
+scheduler.add_job(func=collect, trigger='cron', hour='*', minute='0')
 scheduler.start()

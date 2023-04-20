@@ -32,7 +32,6 @@ import core.crawler.rssCrawl
 #              "https://www.mbn.co.kr/rss/": "mbn"}
 companies = {"https://www.hani.co.kr/rss/": "hankyoreh"}
 
-
 def start_crawl(db, Article, last_crawl):
     start = time.time()
     count = 0
