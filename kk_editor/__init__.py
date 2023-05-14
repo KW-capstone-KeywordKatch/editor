@@ -9,7 +9,7 @@ import datetime
 
 
 # 개발 환경
-# from config import config_dev as config
+# from kk_editor.config import config_dev as config
 # 배포 환경
 from kk_editor.config import config_prod as config
 

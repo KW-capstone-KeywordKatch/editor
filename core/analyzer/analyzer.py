@@ -8,7 +8,7 @@ import time
 import math
 import datetime
 
-from models import Article
+from kk_editor.models import Article
 from kk_editor import db
 
 KEYWORD = dict()
