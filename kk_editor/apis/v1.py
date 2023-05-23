@@ -8,7 +8,7 @@ from kk_editor.models import Article
 from core.crawler.main import start_crawl
 from apscheduler.schedulers.background import BackgroundScheduler
 import datetime
-from core.analyzer import analyzer
+from sqlalchemy import text
 
 bp = Blueprint('api_v1', __name__, url_prefix='/v1')
 
@@ -32,6 +32,9 @@ def delete_article():
         count = Article.query.filter(Article.time <= str_today).delete()
         db.session.commit()
 
+        db.session.execute(text('TRUNCATE TABLE keywords'))
+        db.session.commit()
+
     print(f"기사 {count}개 삭제 완료")
     return count
 
@@ -41,5 +44,5 @@ scheduler.add_job(func=collect, trigger='cron', hour='*', minute='0')
 scheduler.start()
 
 delete_scheduler = BackgroundScheduler()
-delete_scheduler.add_job(func=delete_article, trigger='cron', hour='0', minute=30)
+delete_scheduler.add_job(func=delete_article, trigger='cron', hour='0', minute='30')
 delete_scheduler.start()

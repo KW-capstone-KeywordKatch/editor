@@ -80,7 +80,7 @@ def start_crawl(db, Article, last_crawl):
         # count += core.crawler.rssCrawl.save_articles(entries, company, res.encoding)
 
         ##### DB 저장 #####
-        count += core.crawler.rssCrawl.db_save_artigcles(entries, company, res.encoding, db, Article, last_crawl)
+        count += core.crawler.rssCrawl.db_save_articles(entries, company, res.encoding, db, Article, last_crawl)
         print("-----------------------------------------------------------")
 
 
