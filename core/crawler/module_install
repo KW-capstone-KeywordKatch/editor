@@ -1,8 +1,0 @@
-
-sudo apt update
-
-sudo apt-get install python3-pip
-
-pip install feedparser
-pip install selenium
-pip install beautifulsoup4
