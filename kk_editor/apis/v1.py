@@ -40,9 +40,9 @@ def delete_article():
 
 
 scheduler = BackgroundScheduler()
-scheduler.add_job(func=collect, trigger='cron', hour='*', minute='0')
+scheduler.add_job(func=collect, trigger='cron', hour='*', minute='1')
 scheduler.start()
 
 delete_scheduler = BackgroundScheduler()
-delete_scheduler.add_job(func=delete_article, trigger='cron', hour='0', minute='30')
+delete_scheduler.add_job(func=delete_article, trigger='cron', hour='0', minute='0')
 delete_scheduler.start()
