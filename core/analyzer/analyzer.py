@@ -10,6 +10,7 @@ import datetime
 
 from kk_editor.models import Article
 from kk_editor import db
+from kk_editor.apis.v1 import last_analyze
 
 KEYWORD = dict()
 ARTICLES = dict()   # {id: Article}
@@ -19,7 +20,7 @@ KEYWORD_MAP = []    # [keyword, freq, [article id 리스트]]
 
 def fetch_articles(db, Article):
     global ARTICLES
-    result = Article.query.limit(1000).all()
+    result = Article.query.filter(Article.id > last_analyze).all()
     ARTICLES = {article.id: article for article in result}
 
 
