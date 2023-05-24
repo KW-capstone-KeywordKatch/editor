@@ -18,6 +18,18 @@ TOKENS = dict()     # {id: [tokens]}
 KEYWORD_MAP = []    # [keyword, freq, [article id 리스트]]
 
 
+def init_golbal_vals():
+    global KEYWORD
+    global ARTICLES
+    global TOKENS
+    global KEYWORD_MAP
+
+    KEYWORD = dict()
+    ARTICLES = dict()  # {id: Article}
+    TOKENS = dict()  # {id: [tokens]}
+    KEYWORD_MAP = []
+
+
 def fetch_articles(db, Article):
     global ARTICLES
     result = Article.query.filter(Article.id > last_analyze).all()
@@ -231,6 +243,8 @@ def extract_keyword(db, Article):
     """
     메모리에 로드된 기사들에서 키워드를 추출한다.
     """
+    init_golbal_vals()
+
     global TOKENS
     print(f'[{datetime.datetime.now()}]')
     count_article = 0
@@ -312,6 +326,7 @@ def collect_keyword(db, Keywords):
     total_tokens = {token: [count, [art_id]]}
     """
     C, IDs = 0, 1
+    last_analyze_id = 0
     start = time.time()
     total_tokens = dict()
     for art_id, tokens in TOKENS.items():
@@ -321,18 +336,29 @@ def collect_keyword(db, Keywords):
                 total_tokens[t][IDs].append(str(art_id))
             else:
                 total_tokens[t] = [1, [str(art_id)]]
+        if art_id > last_analyze_id:
+            last_analyze_id = art_id
     # 결과 저장
     data = [Keywords(k, info[C], ' '.join(info[IDs])) for k, info in total_tokens.items()]
     try:
         from kk_editor import app
         with app.app_context():
             for d in data:
-                db.session.add(d)
-            db.session.commit()
+                saved_keyword = Keywords.query.filter(Keywords.keyword == d.keyword).first()
+                if saved_keyword:
+                    saved_keyword.rank += d.rank
+                    saved_keyword.articles += ' ' + d.articles
+                    db.session.commit()
+                else:
+                    db.session.add(d)
+                    db.session.commit()
     except Exception as e:
         print(f'[EROR] [collect_keyword]: {e}')
     end = time.time()
     print(f'[collect_keyword] elapsed time: {round(end-start, 3)}s')
+
+    # 분석 완료한 마지막 기사 id 저장
+    last_analyze = last_analyze_id
     
 
 

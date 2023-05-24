@@ -35,7 +35,7 @@ companies = {"https://fs.jtbc.co.kr/RSS/newsflash.xml": "jtbc", "https://fs.jtbc
 '''
 테스트 url
 '''
-# companies = {"https://www.hani.co.kr/rss/": "hankyoreh"}
+# companies = {"https://rss.donga.com/total.xml": "donga"}
 
 def start_crawl(db, Article, last_crawl):
     start = time.time()
