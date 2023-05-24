@@ -72,6 +72,7 @@ def _set_environ():
     os.environ["FLASK_APP"] = "kk_editor"
     os.environ["FLASK_DEBUG"] = "0"
     os.environ["FLASK_RUN_PORT"] = "8000"
+    os.environ["FLASK_RUN_HOST"] = "0.0.0.0"
 
 
 # 가상환경을 구성하는 패키지 설치
@@ -112,7 +113,7 @@ if __name__ == "__main__":
     try: 
         sys.exit(main(sys.argv))
     except KeyboardInterrupt:
-        from api.v1 import scheduler
+        from apis.v1 import scheduler
         scheduler.shutdown()
         _clear_line("Bye")
         exit(0)
