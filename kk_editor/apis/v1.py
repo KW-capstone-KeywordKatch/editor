@@ -7,7 +7,6 @@ from kk_editor import db
 from kk_editor.models import Article
 from core.crawler.main import start_crawl
 from apscheduler.schedulers.background import BackgroundScheduler
-import datetime
 from sqlalchemy import text
 
 bp = Blueprint('api_v1', __name__, url_prefix='/v1')
@@ -15,6 +14,8 @@ bp = Blueprint('api_v1', __name__, url_prefix='/v1')
 
 # 마지막으로 크롤링 완료한 시각 전역변수로 가지고 있음
 last_crawl = None
+# 최근에 분석 완료한 기사의 id를 가지고 있음
+last_analyze = 0
 @bp.route('/collect')
 def collect():
     global last_crawl
@@ -23,19 +24,16 @@ def collect():
 
 # 매일 00시 30분에 전날 기사 삭제
 def delete_article():
-    today = datetime.datetime.now()
-    str_today = today.strftime("%Y%m%d")
-    str_today = str_today[2:] + '000000'
-
     from kk_editor import app
     with app.app_context():
-        count = Article.query.filter(Article.time <= str_today).delete()
+        count = Article.query.count()
+        db.session.execute(text('TRUNCATE TABLE article'))
         db.session.commit()
 
         db.session.execute(text('TRUNCATE TABLE keywords'))
         db.session.commit()
 
-    print(f"기사 {count}개 삭제 완료")
+    print("기사 초기화 완료")
     return count
 
 
