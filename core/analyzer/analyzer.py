@@ -1,16 +1,13 @@
 """
 기사의 키워드를 추출하는 모듈.
 """
-import os
 import sys
 import re
 import time
 import math
 import datetime
-
 from kk_editor.models import Article
 from kk_editor import db
-from kk_editor.apis.v1 import last_analyze
 
 KEYWORD = dict()
 ARTICLES = dict()   # {id: Article}
@@ -29,6 +26,7 @@ def init_golbal_vals():
     TOKENS = dict()  # {id: [tokens]}
     KEYWORD_MAP = []
 
+last_analyze = 0
 
 def fetch_articles(db, Article):
     global ARTICLES
@@ -63,7 +61,7 @@ def tokenize(content):
     '''
     기사의 본문(content)를 토큰화하여 반환한다.
     '''
-    postposition = set(['에', '을', '를', '은', '는', '이', '가', '게', '의', '와'])
+    postposition = set(['에', '을', '를', '은', '는', '이', '가', '게', '의', '와', '에서', '이라고'])
     tokens = refine(content)
     result = []
     for word in tokens.split(' '):
@@ -256,7 +254,6 @@ def extract_keyword(db, Article):
     TOKENS = {id: [token]}
     '''
     fetch_articles(db, Article)
-    tmp = []
     for art_id, article in ARTICLES.items():
         if len(article.content) == 0:
             continue
@@ -310,7 +307,10 @@ def extract_keyword(db, Article):
     '''
 
     print(f"analyzed {count_article} articles.")
-    print("기사 한 개당 평균 토큰 개수: %0.1f" % (total_token_count/len(TOKENS)))
+    if len(TOKENS) > 0:
+        print("기사 한 개당 평균 토큰 개수: %0.1f" % (total_token_count/len(TOKENS)))
+    else:
+        print(f'TOKENS: {TOKENS}')
     print('전체 토큰 개수: %d' % total_token_count)
     print(f'추출된 keyword 개수 {keyword_count}')
     print("elapsed time: %0.2f" % (end_time - start_time))
@@ -325,6 +325,8 @@ def collect_keyword(db, Keywords):
     TOKENS = {id: {token: score}}
     total_tokens = {token: [count, [art_id]]}
     """
+    global last_analyze
+    print(f'before collect_keyword(): last_analyze = {last_analyze}')
     C, IDs = 0, 1
     last_analyze_id = 0
     start = time.time()
@@ -346,8 +348,12 @@ def collect_keyword(db, Keywords):
             for d in data:
                 saved_keyword = Keywords.query.filter(Keywords.keyword == d.keyword).first()
                 if saved_keyword:
-                    saved_keyword.rank += d.rank
+                    # 중복 제거
                     saved_keyword.articles += ' ' + d.articles
+                    article_list = list(saved_keyword.articles.split(' '))
+                    article_set = set(article_list)
+                    saved_keyword.rank += len(article_list) - len(article_set)
+                    saved_keyword.articles = ' '.join(list(article_set))
                     db.session.commit()
                 else:
                     db.session.add(d)
@@ -359,6 +365,7 @@ def collect_keyword(db, Keywords):
 
     # 분석 완료한 마지막 기사 id 저장
     last_analyze = last_analyze_id
+    print(f'after collect_keyword(): last_analyze = {last_analyze}')
     
 
 
