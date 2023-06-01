@@ -18,7 +18,7 @@ api = Namespace('v0', description='prototype operations')
 class Recommend(Resource):
     @api.doc('기사 추천')
     def get(self, keyword):
-        try: 
+        try:
             data = analyzer.recommend_by_keyword(keyword, Keywords, Article)
             response = {'code': 1,
                         'payload': data}

@@ -366,7 +366,6 @@ def collect_keyword(db, Keywords):
     # 분석 완료한 마지막 기사 id 저장
     last_analyze = last_analyze_id
     print(f'after collect_keyword(): last_analyze = {last_analyze}')
-    
 
 
 def recommend_by_keyword(keyword, Keywords, Article):
@@ -381,7 +380,7 @@ def recommend_by_keyword(keyword, Keywords, Article):
     # 클라이언트에게 반환할 객체 생성
     result = []
     for article in articles:
-        tmp = {'title': article.title, 'link': article.link}
+        tmp = {'title': article.title, 'link': article.link, 'image': article.image, 'press': article.company, 'content': article.content}
         result.append(tmp)
     sys.stdout.flush()
     return result
